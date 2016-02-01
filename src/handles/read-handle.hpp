@@ -22,7 +22,6 @@
 
 #include "base-handle.hpp"
 
-
 namespace repo {
 
 class ReadHandle : public BaseHandle

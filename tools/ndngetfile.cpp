@@ -32,30 +32,38 @@ using std::bind;
 using std::placeholders::_1;
 using std::placeholders::_2;
 
+using std::shared_ptr;
+using std::make_shared;
+
 static const int MAX_RETRY = 3;
 
 void
 Consumer::fetchData(const Name& name)
 {
-  Interest interest(name);
-  interest.setInterestLifetime(m_interestLifetime);
-  //std::cout<<"interest name = "<<interest.getName()<<std::endl;
-  if (m_hasVersion)
-    {
-      interest.setMustBeFresh(m_mustBeFresh);
-    }
-  else
-    {
-      interest.setMustBeFresh(true);
-      interest.setChildSelector(1);
-    }
-
-  m_face.expressInterest(interest,
+  m_face.expressInterest(*m_nextInterest,
                          m_hasVersion ?
                          bind(&Consumer::onVersionedData, this, _1, _2)
                          :
                          bind(&Consumer::onUnversionedData, this, _1, _2),
                          bind(&Consumer::onTimeout, this, _1));
+
+  // prepare the next Interest
+  shared_ptr<ndn::Interest> interest =
+    make_shared<ndn::Interest>(Name(m_dataName).appendSegment(m_nextSegment++));
+
+  interest->setInterestLifetime(m_interestLifetime);
+
+  if (m_hasVersion) // then it must have the same version name
+    {
+      interest->setMustBeFresh(m_mustBeFresh); // whether it has to be fresh depends on user input
+    }
+  else
+    {
+      interest->setMustBeFresh(true);
+      interest->setChildSelector(0);
+    }
+
+  m_nextInterest = interest;
 }
 
 void
@@ -64,7 +72,23 @@ Consumer::run()
   // Send the first Interest
   Name name(m_dataName);
 
-  m_nextSegment++;
+  shared_ptr<ndn::Interest> interest =
+    make_shared<ndn::Interest>(Name(m_dataName).appendSegment(m_nextSegment++));
+
+  interest->setInterestLifetime(m_interestLifetime);
+
+  if (m_hasVersion) // then it must have the same version name
+    {
+      interest->setMustBeFresh(m_mustBeFresh); // whether it has to be fresh depends on user input
+    }
+  else
+    {
+      interest->setMustBeFresh(true);
+      interest->setChildSelector(0);
+    }
+
+  m_nextInterest = interest;
+
   fetchData(name);
 
   // processEvents will block until the requested data received or timeout occurs
@@ -113,26 +137,32 @@ void
 Consumer::onUnversionedData(const Interest& interest, Data& data)
 {
   const Name& name = data.getName();
-  //std::cout<<"recevied data name = "<<name<<std::endl;
-  if (name.size() == m_dataName.size() + 1) {
+
+  if (name.size() == m_dataName.size() + 3) {
+    std::cout << "case 1\n";
     if (!m_isSingle) {
       Name fetchName = name;
       fetchName.append(name[-1]).appendSegment(0);
       fetchData(fetchName);
     }
   }
-  else if (name.size() == m_dataName.size() + 2) {
+  else if (name.size() == m_dataName.size() + 1) {
+    // std::cout << "case 2\n";
     if (!m_isSingle) {
-       if (m_isFirst) {
-        uint64_t segment = name[-1].toSegment();
-        if (segment != 0) {
-          fetchData(Name(m_dataName).append(name[-2]).appendSegment(0));
-          m_isFirst = false;
-          return;
-        }
-        m_isFirst = false;
-      }
-      fetchNextData(name, data);
+      //  if (m_isFirst) {
+      //   std::cout << "m_isFirst == true\n";
+      //   uint64_t segment = name[-1].toSegment();
+      //   if (segment != 0) {
+      //     fetchData(Name(m_dataName).appendSegment(segment+1));
+      //     std::cout << "m_dataName = " << m_dataName << std::endl;
+      //     // fetchData(Name(m_dataName).append(name[-2]).appendSegment(0));
+      //     m_isFirst = false;
+      //     return;
+      //   }
+      //   m_isFirst = false;
+      // }
+      // fetchNextData(name, data);
+      fetchData(Name(m_dataName));
     }
     else {
       std::cerr << "ERROR: Data is not stored in a single packet" << std::endl;
@@ -143,14 +173,14 @@ Consumer::onUnversionedData(const Interest& interest, Data& data)
     std::cerr << "ERROR: Name size does not match" << std::endl;
     return;
   }
-  readData(data);
+  // readData(data);
 }
 
 void
 Consumer::readData(const Data& data)
 {
   const Block& content = data.getContent();
-  m_os.write(reinterpret_cast<const char*>(content.value()), content.value_size());
+  // m_os.write(reinterpret_cast<const char*>(content.value()), content.value_size());
   m_totalSize += content.value_size();
   if (m_verbose)
   {
@@ -166,6 +196,7 @@ Consumer::readData(const Data& data)
 void
 Consumer::fetchNextData(const Name& name, const Data& data)
 {
+  // std::cout << "fetchNextData\n";
   uint64_t segment = name[-1].toSegment();
   BOOST_ASSERT(segment == (m_nextSegment - 1));
   const ndn::name::Component& finalBlockId = data.getMetaInfo().getFinalBlockId();
@@ -179,7 +210,7 @@ Consumer::fetchNextData(const Name& name, const Data& data)
     if (m_hasVersion)
       fetchData(Name(m_dataName).appendSegment(m_nextSegment++));
     else
-      fetchData(Name(m_dataName).append(name[-2]).appendSegment(m_nextSegment++));
+      fetchData(Name(m_dataName).appendSegment(m_nextSegment++));
   }
 }
 

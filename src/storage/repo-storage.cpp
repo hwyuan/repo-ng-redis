@@ -44,6 +44,8 @@ RepoStorage::initialize()
 bool
 RepoStorage::insertData(const Data& data)
 {
+#if 0
+   // With in-memory indexing structure
    bool isExist = m_index.hasData(data);
    if (isExist)
      throw Error("The Entry Has Already In the Skiplist. Cannot be Inserted!");
@@ -51,6 +53,13 @@ RepoStorage::insertData(const Data& data)
    if (id == -1)
      return false;
    return m_index.insert(data, id);
+#else
+	int64_t id = m_storage.insert(data);
+	if (id == -1) {
+		return false;
+	}
+	return true;
+#endif
 }
 
 ssize_t
@@ -102,14 +111,29 @@ RepoStorage::deleteData(const Interest& interest)
 shared_ptr<Data>
 RepoStorage::readData(const Interest& interest) const
 {
+#if 0
+   // With in-memory indexing structure
   std::pair<int64_t,ndn::Name> idName = m_index.find(interest);
   if (idName.first != 0) {
     shared_ptr<Data> data = m_storage.read(idName.first);
     if (data) {
       return data;
     }
+  } else {
+    std::cout << "index lookup return 0\n";
   }
   return shared_ptr<Data>();
+#else
+  // Read from the storage directly
+  shared_ptr<Data> data = m_storage.read(interest);
+  if (data) {
+    return data;
+  } else {
+    std::cout << "index lookup return 0\n";
+  }
+  return shared_ptr<Data>();
+#endif
+
 }
 
 

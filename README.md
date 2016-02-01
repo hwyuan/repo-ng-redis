@@ -1,3 +1,8 @@
+Redis-based Repo-ng
+- Replace the backend storage with a Redis server/process
+- hiredis library(https://github.com/redis/hiredis) is required
+
+
 repo-ng: Next generation of NDN repository
 ==========================================
 

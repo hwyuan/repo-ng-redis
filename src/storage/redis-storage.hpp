@@ -1,6 +1,7 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /**
  * Copyright (c) 2014,  Regents of the University of California.
+ * Copyright (c) 2015, Washington University in St. Louis
  *
  * This file is part of NDN repo-ng (Next generation of NDN repository).
  * See AUTHORS.md for complete list of repo-ng authors and contributors.
@@ -17,19 +18,28 @@
  * repo-ng, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef REPO_STORAGE_STORAGE_HPP
-#define REPO_STORAGE_STORAGE_HPP
+#ifndef REPO_STORAGE_REDIS_STORAGE_HPP
+#define REPO_STORAGE_REDIS_STORAGE_HPP
+
+#include "storage.hpp"
+#include "index.hpp"
 #include <string>
 #include <iostream>
 #include <stdlib.h>
-#include "../common.hpp"
+#include <vector>
+#include <queue>
+#include <algorithm>
+// #include <hiredis.h>
+
+extern "C" {
+#include <hiredis.h>
+}
 
 namespace repo {
 
-/**
-  * @brief Storage is a virtual abstract class which will be called by SqliteStorage
-  */
-class Storage : noncopyable
+using std::queue;
+
+class RedisStorage : public Storage
 {
 public:
   class Error : public std::runtime_error
@@ -42,65 +52,66 @@ public:
     }
   };
 
-public:
-  class ItemMeta
-  {
-  public:
-    int64_t id;
-    Name fullName;
-    ndn::ConstBufferPtr keyLocatorHash;
-  };
-
-public :
+  explicit
+  RedisStorage(const std::string& dbPath);
 
   virtual
-  ~Storage()
-  {
-  };
+  ~RedisStorage();
 
   /**
    *  @brief  put the data into database
-   *  @param  data   the data should be inserted into databse
+   *  @param  data     the data should be inserted into databse
+   *  @return int64_t  the id number of each entry in the database
    */
   virtual int64_t
-  insert(const Data& data) = 0;
+  insert(const Data& data);
 
   /**
    *  @brief  remove the entry in the database by using id
-   *  @param  id   id number of entry in the database
+   *  @param  id   id number of each entry in the database
    */
   virtual bool
-  erase(const int64_t id) = 0;
+  erase(const int64_t id);
 
   /**
    *  @brief  get the data from database
-   *  @param  id   id number of each entry in the database, used to find the data
+   *  @para   id   id number of each entry in the database, used to find the data
    */
   virtual std::shared_ptr<Data>
-  read(const int64_t id) = 0;
+  read(const int64_t id);
 
   /**
    *  @brief  get the data from database
-   *  @param  id   id number of each entry in the database, used to find the data
+   *  @para   id   id number of each entry in the database, used to find the data
    */
   virtual std::shared_ptr<Data>
-  read(const Interest& interest) = 0;
+  read(const Interest& interest);
 
   /**
    *  @brief  return the size of database
    */
   virtual int64_t
-  size() = 0;
+  size();
 
   /**
    *  @brief enumerate each entry in database and call the function
    *         insertItemToIndex to reubuild index from database
    */
-  virtual void
-  fullEnumerate(const std::function<void(const Storage::ItemMeta)>& f) = 0;
+  void
+  fullEnumerate(const std::function<void(const Storage::ItemMeta)>& f);
 
+private:
+  void
+  initializeRepo();
+
+private:
+  redisContext *m_c; // client
+  int64_t m_size;
+  int64_t m_id;       // next avaialble insertion ID
+  std::string m_host; // IP address of the Redis machine
 };
+
 
 } // namespace repo
 
-#endif // REPO_STORAGE_Storage_HPP
+#endif // REPO_STORAGE_SQLITE_STORAGE_HPP

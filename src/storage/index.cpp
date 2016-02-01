@@ -92,13 +92,16 @@ std::pair<int64_t,Name>
 Index::find(const Interest& interest) const
 {
   Name name = interest.getName();
+
   IndexContainer::const_iterator result = m_indexContainer.lower_bound(name);
   if (result != m_indexContainer.end())
     {
+      // std::cout << "result != m_indexContainer\n";
       return selectChild(interest, result);
     }
   else
     {
+      // std::cout << "result == m_indexContainer\n";
       return std::make_pair(0, Name());
     }
 }
@@ -123,7 +126,6 @@ Index::hasData(const Data& data) const
   Index::Entry entry(data, -1); // the id number is useless
   IndexContainer::const_iterator result = m_indexContainer.find(entry);
   return result != m_indexContainer.end();
-
 }
 
 std::pair<int64_t,Name>
@@ -180,17 +182,28 @@ Index::selectChild(const Interest& interest,
 
   if (isLeftmost)
     {
+      // std::cout << "is left most\n";
       for (IndexContainer::const_iterator it = startingPoint;
            it != m_indexContainer.end(); ++it)
         {
+          // std::cout << "interest name = " << interest.getName() << std::endl;
+          // std::cout << it->getName() << std::endl;
           if (!interest.getName().isPrefixOf(it->getName()))
             return std::make_pair(0, Name());
-          if (matchesSimpleSelectors(interest, hash, (*it)))
+          // std::cout << "going to matchesSimpleSelectors\n";
+          if (matchesSimpleSelectors(interest, hash, (*it))) {
+            // std::cout << "matchesSimpleSelectors succeeded!\n";
+            // std::cout << "id = " << it->getId() << std::endl;
             return std::make_pair(it->getId(), it->getName());
+          } else {
+            // std::cout << "matchesSimpleSelectors failed...\n";
+          }
         }
     }
   else
     {
+      // std::cout << "is right most\n";
+
       IndexContainer::const_iterator boundary = m_indexContainer.lower_bound(interest.getName());
       if (boundary == m_indexContainer.end() || !interest.getName().isPrefixOf(boundary->getName()))
         return std::make_pair(0, Name());
@@ -229,6 +242,7 @@ Index::Entry::Entry(const Data& data, const int64_t id)
   : m_name(data.getFullName())
   , m_id(id)
 {
+  // std::cout << "Index::Entry::Entry(const Data& data name = " << data.getFullName() << std::endl;
   const ndn::Signature& signature = data.getSignature();
   if (signature.hasKeyLocator())
     m_keyLocatorHash = computeKeyLocatorHash(signature.getKeyLocator());

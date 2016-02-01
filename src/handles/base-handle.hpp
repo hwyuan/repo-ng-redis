@@ -22,7 +22,7 @@
 
 #include "common.hpp"
 
-#include "storage/repo-storage.hpp"
+#include "../storage/repo-storage.hpp"
 #include "repo-command-response.hpp"
 #include "repo-command-parameter.hpp"
 

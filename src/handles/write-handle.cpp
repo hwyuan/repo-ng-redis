@@ -118,6 +118,8 @@ WriteHandle::onDataValidated(const Interest& interest,
                              const std::shared_ptr<const Data>& data,
                              ProcessId processId)
 {
+  std::cout << "onDataValidated\n";
+
   if (m_processes.count(processId) == 0) {
     return;
   }
@@ -155,6 +157,8 @@ WriteHandle::onSegmentDataValidated(const Interest& interest,
                                     const std::shared_ptr<const Data>& data,
                                     ProcessId processId)
 {
+  // std::cout << "onSegmentDataValidated\n";
+
   if (m_processes.count(processId) == 0) {
     return;
   }

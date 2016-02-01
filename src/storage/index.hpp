@@ -144,7 +144,7 @@ public:
 
 private:
 
-  typedef std::set<Entry> IndexContainer;
+  typedef std::set<Entry> IndexContainer; // Entry has name, id, and digest
 
 public:
   explicit

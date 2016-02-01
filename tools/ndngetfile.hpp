@@ -62,7 +62,7 @@ private:
 
   void
   onTimeout(const ndn::Interest& interest);
-  
+
   void
   readData(const ndn::Data& data);
 
@@ -85,6 +85,7 @@ private:
   int m_totalSize;
   int m_retryCount;
   bool m_mustBeFresh;
+  std::shared_ptr<ndn::Interest> m_nextInterest;
 };
 
 } // namespace repo

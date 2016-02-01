@@ -18,7 +18,7 @@
  */
 
 #include "repo.hpp"
-#include "storage/sqlite-storage.hpp"
+#include "storage/redis-storage.hpp"
 
 namespace repo {
 
@@ -115,7 +115,8 @@ Repo::Repo(boost::asio::io_service& ioService, const RepoConfig& config)
   : m_config(config)
   , m_scheduler(ioService)
   , m_face(ioService)
-  , m_store(std::make_shared<SqliteStorage>(config.dbPath))
+  , m_store(std::make_shared<RedisStorage>(config.dbPath))
+  // , m_store(std::make_shared<SqliteStorage>(config.dbPath))
   , m_storageHandle(config.nMaxPackets, *m_store)
   , m_validator(m_face)
   , m_readHandle(m_face, m_storageHandle, m_keyChain, m_scheduler)

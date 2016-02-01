@@ -24,6 +24,9 @@ def configure(conf):
     conf.check_cfg(package='libndn-cxx', args=['--cflags', '--libs'],
                    uselib_store='NDN_CXX', mandatory=True)
 
+    conf.check_cfg(package='libhiredis', args=['--cflags', '--libs'],
+               uselib_store='HIREDIS', mandatory=True)
+
     conf.check_sqlite3(mandatory=True)
 
     if conf.options.with_tests:
@@ -55,7 +58,7 @@ def build(bld):
         features=["cxx"],
         source=bld.path.ant_glob(['src/**/*.cpp'],
                                  excl=['src/main.cpp']),
-        use='NDN_CXX BOOST SQLITE3',
+        use='NDN_CXX BOOST SQLITE3 HIREDIS',
         includes="src",
         export_includes="src",
         )
@@ -63,7 +66,7 @@ def build(bld):
     bld(target="ndn-repo-ng",
         features=["cxx", "cxxprogram"],
         source=bld.path.ant_glob(['src/main.cpp']),
-        use='ndn-repo-objects',
+        use='ndn-repo-objects HIREDIS',
         )
 
     # Tests
